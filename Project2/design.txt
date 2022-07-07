@@ -1,0 +1,70 @@
+
+1) There can be a maximum of 32 semaphores allowed in the system.
+
+2) There can be a maximum of 64 locks allowed in the system.
+
+3) A semaphore is created by a semCreate function that grabs a new semaphore, clarifies if it
+   is being used by another process or not (as well as if the max number of semaphores has been reached), and then 
+   initializes it with a count to ensure its not initialized to the same value as a previous semaphore.
+   A handle is returned to the semaphore that is created. Interrupts are disabled for this process and then
+   restored right before the semaphore is initialized.
+
+4) semWait is used to make a process wait on a semaphore. When called, the counter decrements and suspends the
+   the process if the semaphore's value is now less than zero (meaning that process does have access to it). 
+   Interrupts are also disabled for this process to ensure atomicity. It will be put in a wait queue until another
+   thread calls semSignal. semSignal is used to "undo" a semwait. When called, the process checks the waiting queue
+   for the blocked process. The counter increments and "unblocks" the process that was being blocked by semWait. 
+   Again, interrupts are disabled for this process to ensure atomicity. 
+
+5) A handle is like a unique ID for a shared memory page for processes. It is used to map
+   the shared memory page associated with it to the private address of a process (using 'shmat').
+   An address gets returned from 'shmat' and the stuff located at that address is whatever we
+   we decide will be there (like a struct for example). In the case of semaphores, when
+   a semaphore is created, a handle is given "to reference" that specific semaphore. Whenever that semaphore
+   is accessed, it will be accessed through that specific handle.    
+   
+
+
+Code:
+
+The assignment for this section was to implement locks. The first thing I did was add a struct 'lock' to synch.h
+the struct was nearly identical to the sem struct, except that locks are identified by the pid of the process using
+them, so instead of a count, the lock struct had an int pid. This also went first in the struct, followed by the Queue
+waiting (the list of proccesses waiting for the lock), and then uint32 inuse (which indicates whether the lock is being
+used or not). That was all that needed coded in sync.h.
+
+I then proceeded to sync.c to implement LockCreate(), LockHandleAcquire(), and LockHandleRelease() by following somewhat
+closely to the logic of the semaphores. 
+
+For LockCreate(), I disabled interrupts to keep the process atomic. I then made a for loop to create a lock starting at zero,
+until the max number of locks has been reached (64). I used 'inuse' to check if the lock was being used by a process. After
+this process, I enabled interrupts again. I then made if statements to check if the max number of locks had been reached or
+if the lock initialization had failed. If either were true, it would return a fail (-1). Otherwise, it would return the lock (1).
+I then made a section function called LockInit() to initialize the locks. If there was no lock, it would return a fail (-1).
+I then had another if statement would check if the lock waiting queue initialized properly, and it would print a fail message 
+and exit the simulator if true. Otherwise, it would then set the pid in the lock struct to -1 (meaning the lock is available), and
+then return a unique id for the lock (a handle). Essentially through this process, a new lock is grabbed from a pool of them,
+initialized, and then a flag is set to indicate whether the lock was in use or not.
+
+For LockAcquire(), I used an if statement to check if there was a lock to be acquired, and returned a fail (-1) if true.
+I then disabled interrupts to keep the process atomic. I then used an if statement to check if the lock was already owned by 
+another process. If true, it would print a message saying the lock was already owned. I then enabled interrupts again and
+returned success (1). I then had a message print display that a process was asking for a lock. I used another if statement to 
+check if the lock was owned, and then if true, that asking process would go to sleep (I used some other print statements for debugging
+in case linking the process to the waiting queue failed). If the lock was unowned, I had an else statement with a message saying the lock
+is unowned and will be assigned to the process. Interrupts would now be restored. The else statement would return the lock (1). 
+I then had another function labeled LockHandleAcquire() that I used to clarify if the lock was a valid number, if it was greater than the max
+number of locks allowed, and if it were already owned. If any of those were true, it would return a fail (-1). If none were true, it would
+return the above LockAcquire function output. Essentially through this process, a unique lock (described by its handle) is released.
+It first checks to ensure it is a valid lock, then checks the calling process owns said lock. If both are true, the lock is
+released and a zero is returned. 
+
+For LockRelease(), I used an if statement to check if there was a lock, and returned a fail (-1) if true.
+I then disabled interrupts to keep the process atomic. I then used an if statement to check if the lock was owned by 
+another process. If true, it would print a message saying the lock was not owned by said process (this would return a fail -1). 
+The pid number was then set to -1 to make it available. I then used another if statement to check the queue list of processes
+currently waiting for a lock, and would link the lock's handle to that process (there were also deugging statements included to
+ensure the linking was successful). That top process would then be woken up from its slumber and executed. Interrupts were then enabled again
+and the process returned success (1). I then had another function labeled LockHandleRelease() that I used to clarify if the lock was a
+valid number, if it was greater than the max number of locks allowed, and if it were already owned. If any of those were true, it would
+return a fail (-1). If none were true, it would return the above LockAcquire function output.
