@@ -1,0 +1,85 @@
+// Design.txt by Tyler Rose
+
+
+Lab4_1:
+
+
+memory.h:
+
+First, I changed MEMORY_L1_PAGE_SIZE_BITS and MEMORY_L2_PAGE_SIZE_BITS both to 13 because each 
+entry was changed to 8 KB and 2^13 is 8 KB. Both are the same because there is no L2 table in 
+part 1. I then changed L1_MAX_ENTRIES to 0x40 because the max number of entries is 64 (0x40 is 
+64 in hex). Everything else was left untouched. 
+
+memory.c:
+
+in MemoryTranslateUserToSystem function, I changed the if statement checking if the max number 
+of pages has been reached from the npages in the pcb struct to L1_MAX_ENTRIES, since that is 
+defined as the max number of entries for L1 table. Everything else was left untouched.
+
+process.c:
+
+Going down the file in order (because I am writing this after the fact and do not remember 
+exactly what steps I took in which order), the first alteration I made was to PRocessFreeResources.
+I needed to free the process’s memory, so I made a for loop that continued until the max number 
+of entries had been reached. For every iteration, I would check to make sure that entry had 
+something in it, then would free the memory of that entry in the table. After the for loop 
+completed, I reset npages to 0 for that process. 
+
+The next change I made was in ProcessFork. I needed to initialize the memory for the process. 
+I used a for loop to ensure all pages in the table were empty, then I used another for loop to 
+allocate 3 pages for text and data. If a page was unable to be allocated, the program exited. 
+I then put the new page as an entry in the pagetable. I then repeated this process for 1 page 
+for the user stack and 1 page for the system stack. At the end, I recalculated the system stack 
+area. I then set the size of the level 1 page table to L1_MAX_ENTRIES. 
+
+I then altered ProcessKill by removing it from the queue and then freeing any resources of the 
+process.
+ 
+I then altered PageFaultHandler. I used an if statement to check if the mac number of pages had 
+been reached and killed the process if true. I then allocated a new page. If a new page was 
+unable to be allocated, I killed the process. I then set the page size and put it as an entry 
+in the table and incremented the number of pages by 1. 
+
+That was all the coding/changes I made to Lab4_1.
+
+
+
+Lab4_2:
+
+
+memory.h:
+
+First, I changed MEMORY_L1_PAGE_SIZE_BITS to 19 because each entry in L1 is 512 KB and then I changed
+MEMORY_L2_PAGE_SIZE_BITS to 13 because each entry in L2 is 8 KB. I then added the L1 and L2 max entry
+numbers and multiplied them by the memory page size to get the virtual address space. I then set L1_MAX_ENTRIES
+to 32 entries and L2_MAX_ENTRIES to 64 (this was given info in the pdf). Everything else in this file was left
+untouched.
+
+memory.c:
+
+In MemoryTranslateUserToSystem I needed to translate the user address into a physical address. First, I checked to 
+make sure there was enough memory space available. I then calculated the L2 page table pointer and returned the 
+physical address. Everything else was left untouched. 
+
+process.c:
+
+In ProcessFreeResources, I needed to free the process’s memory. I made a for loop to check all L1 entries and for 
+each L1 entry, another for loop would check each L2 entry and free any memory that had data in it. It would then free 
+the L1 page and repeat until every resource for that process was freed. Then the number of pages would be reset.
+ 
+Then in ProcessFork, I needed to initialize the memory for the process. I started by allocating the first page in the 
+L2 page table. I then set the page up as the new page table entry and set the address for it. I then allocated 3 pages 
+for text and data and set up each of their page addresses. I then allocated another page for the last page in the L2 
+page table and added it for setup and also set its address. I then allocated 2 more pages for user and system stacks 
+and set their individual addresses. After each allocation above, I had an if statement checking to ensure each page 
+was successfully allocated. I then set the stackframe size by multiplying both max amount of page entries for L1 and L2.
+ 
+Then in ProcessKill, I removed the process from the queue and freed all resources from that process. 
+
+Then in PageFaultHandler, I allocated a new memory page for L2 page table within the L1 entry. If the page wasn’t 
+allocated correctly, the process was killed. I then set the address. I then checked if anything was already saved 
+in the L1 page entry and proceeded to save the new page to the L1 entry. I then set the page’s address. I then repeated 
+the steps and at the end incremented the number of pages in the currentPCB struct. All other code was left untouched. 
+
+    
