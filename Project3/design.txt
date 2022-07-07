@@ -1,0 +1,84 @@
+// Project 3 design.txt by Tyler Rose
+
+
+process.h:
+
+In process.h, the data for the scheduling algorithm was needed in the PCB struct.
+This data included: 
+  int	          	p_nice;			// value specified when the process is created
+  unsigned long		estcpu; 		// estimated cpu utilization
+  uint32         	runtime;		// runtime (self explanatory)
+  uint32          	sleeptime; 		// Time a process is asleep
+  int	           	prio;			// priority variable
+  int	          	runQueueNum;	// queue number variable
+  int	          	time_mod;		// for modifying cpu time
+  int	          	p_info;			// not entirely sure to be honest
+  int	          	quanta; 		// Number of quanta the PCB has run in total
+  
+Also included to be declared was uint32 my_timer_get() (a function for returning the time elapsed)
+These were the only modifications made in process.has
+
+
+process.c: (this is where all the good stuff happened)
+
+Going from the top down (I forgot I had to write a description, so this is being done after the 
+project has been completed, so it is not as easy to remember exactly what I did in order. My apologies.)
+
+I had to create runQueue as an array in order to index through the 32 processes, so I declared Queue runQueue[32]
+as an array. I also had to declare 2 static variables for counting the total quanta and the start of the timer. I 
+then declared a function for returning the time elapsed in seconds. 
+
+
+ProcessModuleInit(): 
+
+All of the cues were already being initialized, but the runQueue needed initialzed 32 times, so I made a for loop 
+to index the runQueue[i] 32 times.
+
+
+ProcessNextPrio():
+
+I made this utility function to find the next highest priority process to be ran.
+I declared the function as PCB * type and the had a for loop to shuffle through all 32 runQueues and find the next 
+process in line and move that process to the front of the queue and return the process number.
+
+
+ProcessSchedule:
+
+First, I commented out the section of code that makes OS exit if there is no process. Then I incremenmted the quanta
+and total number of quantas. I then called the ProcessNextPrio to get the next process to run. I then set up the runtime
+calculation by subtracting the start time from the time returned from the timer function. I then set the start time equal
+to the time returned by the timer function. Next i had made a new if statement to check if there was no processes left by
+checking if anything returned from the ProcessNectPrio function call. If nothing returned, the OS exited. I then checked if
+the previous process was still the highest priority and if so, incremented the estimated cpu time and moved that process 
+from the front of the queue to the end. I then checked if the number of quanta was greater than 4 and then recalculated all
+the priorities. I then recalculated the run queue number and moved the process to the end of the queue. I then checked if the 
+total number fo quantas was above 10, and made a for loop to run through each queue 32 times to count all the processes. I then
+made another for loop as long as how many processes were counted and decayed the estimated cpu time for all of them. I then
+recalculated the priorities, reset the queue number, and moved the process to the end of the queue. I then called ProcessNextPrio 
+to get the next highest priority process and again checked if the previous process was still highest priority (and if so moved it
+to the end of the queue). I then called ProcessNextPrio again (the previous one was inside the if statement) and reset the pcb to
+the current pcb. I then commented out the code for moving the front of the queue to the end because I did not need it. I left the
+rest of the code in the function untouched. 
+
+
+ProcessSuspend():
+
+The only line of code I added here was accessing the time the process was asleep and saving it to sleeptime.
+
+
+ProcessWakeup():
+
+In this function I wrote a line of code to get the time the process was asleep (in seconds), and then had an if statement checking
+if the process was asleep longer than 1 second. If so, the estimated cpu time was recalculated and thenthe process was woken up. 
+after being woken up, the prioroty was then recalculated and the run queue number was reset. All other code was left untouched.
+
+
+ProcessFork():
+
+In this function I initialized the pcb members for the scheduling algorithm. Each data in the pcb struct was initialized. But right
+before I initialized them, I had an if else statement for p_nice. To be honest, I am slightly unsure why it was needed, but I recieved
+guidance from another student that it was needed, and when I tested the file without it, the output was incorrect, so I left it there.
+Then at the bottom of ProcessFork, the PCB needed placed onto the run queue, so i put one line of code inbetween the interrupt lines that 
+placed the pcb onto the end of run queue (using the index of user process divided by 4). The rest of the code was left untouched. 
+ 
+  
