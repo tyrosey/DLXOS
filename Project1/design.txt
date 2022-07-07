@@ -1,0 +1,21 @@
+After many confusing hours, I finally got pid 31 as a result. I am going to do my best to explain this process.
+
+First, userprog is going to call GetPID(). This is going to first be found in usertraps.s (where I
+created a new interface _GetPID). in usertraps.s, the _GetPID calls trap #0x431. It then heads to traps.h to see
+what trap is defined by #0x431. Turns out, TRAP_GETPID is defined as #0x431 (this would have been defined by me,
+but it was already defined beforehand). The intrhandler is now called (this sets up the stacks). the interhandler
+jumps to dointerrupt, where the trap GETPID is now called. In the case statement for TRAP, I created a TRAP_GETPID 
+case that sets int pid equal to GetPID(). This GetPID function is found in process.c, where I created the function to 
+return the currentPCB - pcbs (to get the correct pid value, which is 31 for our case). Once returned to the trap, 
+ProcessSetResult is called with parameters currentPCB and pid (this will set the result returned to the process and 
+will allow it to be returned from the system call). ProcessSetResult is also declared in process.c and is defined in 
+process.h. The pid value is now set and goes to the handler, where it is then passed to inrreturn. From there, it is 
+crossed back into user mode and goes to the trap caller, before finally being returned to main (userprog).
+
+The only files I modified were trap.c (added a TRAP_GETPID case that called GetPID() process and called ProccessSetResult),
+process.c (where i added GetPID() as a new process that returned currentPCB - pcbs, which gives the correct current pid value),
+had to ensure traps.h had a TRAP_GETPID defined (which it did already), and usertraps.s (where I created a new trap interface
+using the defined GETPID #0x431 found in traps.h).
+
+
+
